@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SecureShare — Self-Destructing Documents</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>"/>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #18181f;
+    --surface2: #22222c;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f5;
+    --muted: #8b8b99;
+    --accent: #7c6af7;
+    --accent-hover: #9080ff;
+    --accent-dim: rgba(124,106,247,0.15);
+    --success: #34c77b;
+    --success-dim: rgba(52,199,123,0.12);
+    --danger: #ff4f4f;
+    --danger-dim: rgba(255,79,79,0.12);
+    --warning: #f5a623;
+    --warning-dim: rgba(245,166,35,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* NAVBAR */
+  nav {
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: rgba(15,15,19,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+  .logo { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .logo span { color: var(--accent); }
+  .nav-badge { font-size: 11px; background: var(--accent-dim); color: var(--accent); padding: 3px 8px; border-radius: 99px; border: 1px solid rgba(124,106,247,0.3); }
+
+  /* HERO */
+  .hero {
+    text-align: center;
+    padding: 64px 24px 48px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .hero-icon { font-size: 48px; margin-bottom: 16px; display: block; }
+  .hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 12px; line-height: 1.2; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p { font-size: 15px; color: var(--muted); line-height: 1.7; max-width: 460px; margin: 0 auto; }
+
+  /* TABS */
+  .tabs-wrap { max-width: 700px; margin: 0 auto; padding: 0 16px; }
+  .tabs {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: none;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border2);
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  /* FORM */
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  input, textarea, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    padding: 10px 14px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 140px; line-height: 1.7; }
+  select option { background: var(--surface2); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    color: var(--text);
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+  .btn:hover { border-color: var(--border2); background: #2a2a38; }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .btn.primary {
+    background: var(--accent);
+    border-color: transparent;
+    color: #fff;
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+  }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.danger { color: var(--danger); border-color: rgba(255,79,79,0.3); }
+  .btn.danger:hover { background: var(--danger-dim); }
+  .btn.sm { padding: 7px 14px; font-size: 13px; }
+
+  /* RESULT BOX */
+  .result-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 16px;
+  }
+  .result-box.success { border-color: rgba(52,199,123,0.3); }
+  .result-box.error { border-color: rgba(255,79,79,0.3); }
+
+  /* ID DISPLAY */
+  .doc-id {
+    font-family: 'Courier New', monospace;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 6px;
+    color: var(--accent);
+    margin: 10px 0;
+    word-break: break-all;
+  }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 99px;
+  }
+  .badge.active { background: var(--success-dim); color: var(--success); }
+  .badge.expired { background: var(--danger-dim); color: var(--danger); }
+  .badge.soon { background: var(--warning-dim); color: var(--warning); }
+  .badge.info { background: var(--accent-dim); color: var(--accent); }
+
+  /* DOC CARDS IN VAULT */
+  .doc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 10px;
+    transition: border-color 0.2s;
+  }
+  .doc-card:hover { border-color: var(--border2); }
+  .doc-card-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .doc-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .doc-card-sub { font-size: 12px; color: var(--muted); }
+  .doc-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .timer-wrap { background: var(--surface2); border-radius: 99px; height: 4px; margin: 8px 0; }
+  .timer-bar { height: 4px; border-radius: 99px; transition: width 0.5s; }
+
+  /* VIEWER */
+  .viewer {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-top: 16px;
+  }
+  .viewer-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .viewer-title { font-size: 16px; font-weight: 700; }
+  .viewer-content { font-size: 14px; line-height: 1.9; white-space: pre-wrap; color: var(--text); }
+  .viewer-footer { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+
+  /* INFO BOX */
+  .info-box {
+    background: var(--accent-dim);
+    border: 1px solid rgba(124,106,247,0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #a89ef7;
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 48px 0; color: var(--muted); }
+  .empty .empty-icon { font-size: 40px; display: block; margin-bottom: 12px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 9999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* LOADING SPINNER */
+  .spin { display: inline-block; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* SECTION */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    font-size: 13px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 48px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 500px) {
+    .row { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 24px; }
+    .doc-id { font-size: 22px; letter-spacing: 4px; }
+    .tab span.tab-label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🔐 <span>Secure</span>Share</div>
+  <span class="nav-badge">End-to-expiry protection</span>
+</nav>
+
+<div class="hero">
+  <span class="hero-icon">🛡️</span>
+  <h1>Share sensitive info that <em>self-destructs</em></h1>
+  <p>Create encrypted documents for your clients. Set an expiry date — when time is up, the content is permanently deleted. No downloads. No traces.</p>
+</div>
+
+<div class="tabs-wrap">
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('create')">✏️ <span class="tab-label">Create</span></button>
+    <button class="tab" onclick="switchTab('vault')">🗄 <span class="tab-label">My Vault</span></button>
+    <button class="tab" onclick="switchTab('open')">🔑 <span class="tab-label">Open Link</span></button>
+  </div>
+
+  <!-- CREATE TAB -->
+  <div id="tab-create" class="section active">
+    <div class="card">
+      <div class="field">
+        <label>Document title</label>
+        <input type="text" id="doc-title" placeholder="e.g. Project Pricing — Client ABC" />
+      </div>
+      <div class="field">
+        <label>Sensitive content</label>
+        <textarea id="doc-content" placeholder="Paste your sensitive content here — contract terms, credentials, pricing, personal info..."></textarea>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Expires after</label>
+          <select id="expiry-amount">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="5">5</option>
+            <option value="7" selected>7</option>
+            <option value="14">14</option>
+            <option value="30">30</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Unit</label>
+          <select id="expiry-unit">
+            <option value="hours">Hours</option>
+            <option value="days" selected>Days</option>
+            <option value="weeks">Weeks</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Max opens</label>
+          <select id="max-opens">
+            <option value="0">Unlimited</option>
+            <option value="1">1 time only</option>
+            <option value="3">3 times</option>
+            <option value="5">5 times</option>
+            <option value="10">10 times</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Passcode (optional)</label>
+          <input type="text" id="doc-pass" placeholder="Leave blank for none" />
+        </div>
+      </div>
+      <button class="btn primary" id="create-btn" onclick="createDoc()">🔒 Seal & Generate Link</button>
+    </div>
+    <div id="create-result"></div>
+  </div>
+
+  <!-- VAULT TAB -->
+  <div id="tab-vault" class="section">
+    <div id="vault-list"></div>
+  </div>
+
+  <!-- OPEN TAB -->
+  <div id="tab-open" class="section">
+    <div class="card">
+      <div class="info-box">
+        ℹ️ Enter the document ID shared with you. Once the document expires or reaches max opens, it is <strong>permanently deleted</strong> — no recovery possible.
+      </div>
+      <div class="field">
+        <label>Document ID</label>
+        <input type="text" id="open-id" placeholder="e.g. AB3X9KL2M" style="text-transform:uppercase;font-family:'Courier New',monospace;font-size:16px;letter-spacing:3px;" />
+      </div>
+      <div class="field" id="pass-field" style="display:none">
+        <label>Passcode</label>
+        <input type="password" id="open-pass" placeholder="Enter passcode" />
+      </div>
+      <button class="btn primary" id="open-btn" onclick="lookupDoc()">👁 Open Document</button>
+    </div>
+    <div id="open-result"></div>
+  </div>
+
+</div>
+
+<footer>
+  Built with SecureShare &nbsp;•&nbsp; Documents auto-delete on expiry &nbsp;•&nbsp; No file downloads &nbsp;•&nbsp; Your data, your control
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────
+  const SUPABASE_URL = 'https://ontkxccwecfmvbykntbj.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9udGt4Y2N3ZWNmbXZieWtudGJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3NjMwMDIsImV4cCI6MjA5NjMzOTAwMn0.52TsGT5eLeunv_Ck8cIbuazOJy4k0MEAWIeo1XS2DcY';
+  const API = SUPABASE_URL + '/rest/v1/docs';
+  const H = { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };
+  // ────────────────────────────────────────────────────
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function genId() {
+    const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let id = '';
+    for (let i = 0; i < 9; i++) id += c[Math.floor(Math.random() * c.length)];
+    return id;
+  }
+
+  function getExpiryMs(amount, unit) {
+    const n = parseInt(amount);
+    if (unit === 'hours') return n * 3600000;
+    if (unit === 'weeks') return n * 7 * 86400000;
+    return n * 86400000;
+  }
+
+  function formatExpiry(ts) {
+    const diff = ts - Date.now();
+    if (diff <= 0) return { text: 'Expired', status: 'expired' };
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    if (d >= 1) return { text: d + ' day' + (d !== 1 ? 's' : '') + ' left', status: d <= 2 ? 'soon' : 'active' };
+    return { text: h + ' hour' + (h !== 1 ? 's' : '') + ' left', status: h <= 6 ? 'soon' : 'active' };
+  }
+
+  function badge(info) {
+    const icon = info.status === 'expired' ? '💀' : info.status === 'soon' ? '⏰' : '✅';
+    return `<span class="badge ${info.status === 'active' ? 'active' : info.status === 'soon' ? 'soon' : 'expired'}">${icon} ${info.text}</span>`;
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    const tabs = ['create', 'vault', 'open'];
+    document.querySelectorAll('.tab')[tabs.indexOf(name)].classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+    if (name === 'vault') renderVault();
+  }
+
+  async function sbFetch(path, opts) {
+    const res = await fetch(API + path, { ...opts, headers: { ...H, ...(opts.headers || {}) } });
+    if (!res.ok) { const e = await res.text(); throw new Error(e); }
+    const ct = res.headers.get('content-type') || '';
+    if (ct.includes('json') && res.status !== 204) return res.json();
+    return null;
+  }
+
+  async function createDoc() {
+    const title = document.getElementById('doc-title').value.trim();
+    const content = document.getElementById('doc-content').value.trim();
+    const amount = document.getElementById('expiry-amount').value;
+    const unit = document.getElementById('expiry-unit').value;
+    const maxOpens = parseInt(document.getElementById('max-opens').value);
+    const pass = document.getElementById('doc-pass').value.trim();
+
+    if (!title) { toast('⚠️ Please enter a title.'); return; }
+    if (!content) { toast('⚠️ Please enter some content.'); return; }
+
+    const btn = document.getElementById('create-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spin">⏳</span> Sealing document...';
+
+    try {
+      const id = genId();
+      const expiresAt = Date.now() + getExpiryMs(amount, unit);
+      await sbFetch('', {
+        method: 'POST',
+        body: JSON.stringify({ id, title, content, expires_at: expiresAt, max_opens: maxOpens, opens: 0, pass, created_at: Date.now() }),
+        headers: { 'Prefer': 'return=minimal' }
+      });
+
+      const info = formatExpiry(expiresAt);
+      const shareUrl = window.location.origin + window.location.pathname + '?id=' + id;
+
+      document.getElementById('create-result').innerHTML = `
+        <div class="result-box success">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:4px">✅ Document sealed. Share this ID with your client:</p>
+          <div class="doc-id">${id}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">
+            ${badge(info)}
+            ${maxOpens > 0 ? `<span class="badge info">👁 Max ${maxOpens} open${maxOpens > 1 ? 's' : ''}</span>` : ''}
+            ${pass ? `<span class="badge info">🔑 Passcode protected</span>` : ''}
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+            <button class="btn sm" onclick="copyText('${id}')">📋 Copy ID</button>
+            <button class="btn sm" onclick="copyText('${shareUrl}')">🔗 Copy Full Link</button>
+          </div>
+          <p style="font-size:12px;color:var(--muted);margin-top:14px;line-height:1.6">Your client visits this website and enters the ID in the <strong>Open Link</strong> tab. After expiry, it is gone forever.</p>
+        </div>`;
+
+      document.getElementById('doc-title').value = '';
+      document.getElementById('doc-content').value = '';
+      document.getElementById('doc-pass').value = '';
+    } catch (e) {
+      toast('❌ Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.innerHTML = '🔒 Seal & Generate Link';
+    }
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => toast('✅ Copied to clipboard!'));
+  }
+
+  async function renderVault() {
+    const list = document.getElementById('vault-list');
+    list.innerHTML = `<div class="empty"><span class="spin empty-icon">⏳</span>Loading your vault...</div>`;
+    try {
+      const docs = await sbFetch('?order=created_at.desc&select=*', { method: 'GET' });
+      if (!docs || docs.length === 0) {
+        list.innerHTML = `<div class="empty"><span class="empty-icon">🛡️</span>No documents yet.<br>Create one to get started.</div>`;
+        return;
+      }
+      const now = Date.now();
+      let html = '';
+      for (const doc of docs) {
+        const info = formatExpiry(doc.expires_at);
+        const expired = now > doc.expires_at || (doc.max_opens > 0 && doc.opens >= doc.max_opens);
+        const total = doc.expires_at - doc.created_at;
+        const left = Math.max(0, doc.expires_at - now);
+        const pct = Math.round((left / total) * 100);
+        const barColor = pct > 50 ? 'var(--success)' : pct > 20 ? 'var(--warning)' : 'var(--danger)';
+        html += `<div class="doc-card">
+          <div class="doc-card-title">📄 ${esc(doc.title)}</div>
+          <div class="doc-card-meta">
+            ${expired ? `<span class="badge expired">💀 Destroyed</span>` : badge(info)}
+            <span class="doc-card-sub">ID: ${doc.id}</span>
+            ${doc.pass ? `<span class="doc-card-sub">🔑 Protected</span>` : ''}
+            ${doc.max_opens > 0 ? `<span class="doc-card-sub">👁 ${doc.opens}/${doc.max_opens} opens</span>` : ''}
+          </div>
+          ${!expired ? `<div class="timer-wrap"><div class="timer-bar" style="width:${pct}%;background:${barColor}"></div></div>` : ''}
+          <div class="doc-card-actions">
+            <button class="btn sm" onclick="copyText('${doc.id}')">📋 Copy ID</button>
+            <button class="btn sm danger" onclick="destroyDoc('${doc.id}')">🗑 Destroy Now</button>
+          </div>
+        </div>`;
+        if (expired) sbFetch('?id=eq.' + doc.id, { method: 'DELETE' }).catch(() => {});
+      }
+      list.innerHTML = html;
+    } catch (e) {
+      list.innerHTML = `<div class="empty">❌ Could not load vault.<br><small>${e.message}</small></div>`;
+    }
+  }
+
+  async function destroyDoc(id) {
+    if (!confirm('Permanently destroy this document? This cannot be undone.')) return;
+    try {
+      await sbFetch('?id=eq.' + id, { method: 'DELETE' });
+      toast('🗑 Document destroyed.');
+      renderVault();
+    } catch (e) { toast('❌ Error: ' + e.message); }
+  }
+
+  async function lookupDoc() {
+    const raw = document.getElementById('open-id').value.trim().toUpperCase().replace(/\s/g, '');
+    const enteredPass = document.getElementById('open-pass').value.trim();
+    const resultEl = document.getElementById('open-result');
+    if (!raw) { toast('⚠️ Please enter a document ID.'); return; }
+
+    const btn = document.getElementById('open-btn');
+    btn.disabled = true; btn.innerHTML = '<span class="spin">⏳</span> Opening...';
+
+    try {
+      const docs = await sbFetch('?id=eq.' + raw + '&select=*', { method: 'GET' });
+      if (!docs || docs.length === 0) {
+        resultEl.innerHTML = `<div class="result-box error"><p style="color:var(--danger)">💀 Document not found or already permanently destroyed.</p></div>`;
+        return;
+      }
+      const doc = docs[0];
+      const expired = Date.now() > doc.expires_at;
+      const limitReached = doc.max_opens > 0 && doc.opens >= doc.max_opens;
+
+      if (expired || limitReached) {
+        await sbFetch('?id=eq.' + raw, { method: 'DELETE' });
+        const reason = expired ? 'This document has expired and has been permanently destroyed.' : 'This document reached its maximum number of opens and has been destroyed.';
+        resultEl.innerHTML = `<div class="result-box error"><p style="color:var(--danger)">🔥 ${reason}</p></div>`;
+        return;
+      }
+
+      if (doc.pass && enteredPass !== doc.pass) {
+        document.getElementById('pass-field').style.display = 'block';
+        resultEl.innerHTML = enteredPass
+          ? `<div class="result-box error"><p style="color:var(--danger)">🔑 Incorrect passcode.</p></div>`
+          : `<div class="result-box"><p style="color:var(--muted)">🔑 Enter the passcode above to open this document.</p></div>`;
+        return;
+      }
+
+      const newOpens = doc.opens + 1;
+      await sbFetch('?id=eq.' + raw, { method: 'PATCH', body: JSON.stringify({ opens: newOpens }), headers: { 'Prefer': 'return=minimal' } });
+
+      const info = formatExpiry(doc.expires_at);
+      const opensLeft = doc.max_opens > 0 ? doc.max_opens - newOpens : null;
+
+      resultEl.innerHTML = `<div class="viewer">
+        <div class="viewer-header">
+          <div class="viewer-title">📄 ${esc(doc.title)}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${badge(info)}
+            ${opensLeft !== null ? `<span class="badge soon">👁 ${opensLeft} open${opensLeft !== 1 ? 's' : ''} left</span>` : ''}
+          </div>
+        </div>
+        <div class="viewer-content">${esc(doc.content)}</div>
+        <div class="viewer-footer">
+          🔐 Self-destructing document &nbsp;•&nbsp; View ${newOpens}${doc.max_opens > 0 ? '/' + doc.max_opens : ''} &nbsp;•&nbsp; Expires ${new Date(doc.expires_at).toLocaleString()}
+        </div>
+      </div>`;
+    } catch (e) {
+      resultEl.innerHTML = `<div class="result-box error"><p style="color:var(--danger)">❌ Error: ${e.message}</p></div>`;
+    } finally {
+      btn.disabled = false; btn.innerHTML = '👁 Open Document';
+    }
+  }
+
+  // Auto-fill ID from URL param (e.g. ?id=AB3X9KL2M)
+  window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    if (id) {
+      switchTab('open');
+      document.getElementById('open-id').value = id.toUpperCase();
+      lookupDoc();
+    }
+  });
+</script>
+</body>
+</html>
